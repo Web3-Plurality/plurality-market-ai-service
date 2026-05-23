@@ -96,14 +96,20 @@ GOOGLE_API_KEY=your_google_api_key
 
 ## Running the Application
 
-Start the FastAPI server:
+Start the FastAPI server on port **8001** (the market stack's AI service port — keeps it
+out of collision with prod's AI service on 8000):
+
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 The API will be available at:
-- API endpoints: http://localhost:8000
-- API documentation: http://localhost:8000/docs
+- API endpoints: http://localhost:8001
+- API documentation: http://localhost:8001/docs
+
+> The `--port 8001` flag is **required** — uvicorn defaults to 8000 if you omit it, which
+> collides with the prod AI service and breaks `market-backend`'s `AI_SERVICE_URL`. Always
+> include it when restarting.
 
 
 ## Environment Variables

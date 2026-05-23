@@ -4,17 +4,41 @@ from fastapi import HTTPException
 from app.services.base_service import BaseService
 from app.services.database_service import database_service
 from app.models.schemas import SimilaritySearchRequest, SimilaritySearchResponse, SimilarityResult
+from app.config.settings import settings
 
 class VectorService(BaseService):
     def __init__(self):
         super().__init__()
 
+    def _stamp_namespace(self, metadata: dict) -> dict:
+        """Inject the tenant namespace into vector metadata before write.
+        No-op when NAMESPACE_PREFIX is empty (single-tenant deployments)."""
+        if not settings.NAMESPACE_PREFIX:
+            return metadata
+        stamped = dict(metadata) if metadata else {}
+        stamped["namespace"] = settings.NAMESPACE_PREFIX
+        return stamped
+
+    def _scope_filter(self, filter_metadata: dict) -> dict:
+        """Add namespace constraint to a query filter so reads only see this
+        tenant's vectors. No-op when NAMESPACE_PREFIX is empty."""
+        if not settings.NAMESPACE_PREFIX:
+            return filter_metadata
+        scoped = dict(filter_metadata) if filter_metadata else {}
+        scoped["namespace"] = settings.NAMESPACE_PREFIX
+        return scoped
+
     def _filter_orphaned_vectors(self, relevant_docs: list) -> list:
-        """Filter out orphaned vectors from deleted contexts"""
+        """Filter out orphaned vectors (vectors whose context row was deleted
+        from Postgres). Defends against stale S3 entries after a delete.
+
+        Important misconfig case: if ALL returned vectors get classified as
+        orphans, it usually means the DB connection is pointed at the wrong
+        database (so legitimate contexts appear missing). We surface this
+        explicitly because it's a sneaky silent-empty-results failure mode."""
         if not relevant_docs:
             return relevant_docs
 
-        # Extract unique context IDs from all documents
         context_ids = set()
         for doc in relevant_docs:
             metadata = doc.get('metadata', {})
@@ -22,13 +46,10 @@ class VectorService(BaseService):
             if context_id:
                 context_ids.add(context_id)
 
-        # Batch validate all unique context IDs (single DB query for all IDs!)
         valid_context_ids = database_service.batch_context_exists(list(context_ids))
 
-        # Filter documents based on validated context IDs
         validated_docs = []
         orphaned_count = 0
-
         for doc in relevant_docs:
             metadata = doc.get('metadata', {})
             context_id = metadata.get('contextId') or metadata.get('fileId')
@@ -37,11 +58,28 @@ class VectorService(BaseService):
                 validated_docs.append(doc)
             else:
                 orphaned_count += 1
-                if orphaned_count == 1:  # Only log first orphaned vector to reduce noise
-                    print(f"[VECTOR_SERVICE] ⚠ Found orphaned vectors from deleted context(s)")
 
-        if orphaned_count > 0:
-            print(f"[VECTOR_SERVICE] Filtered out {orphaned_count} orphaned vectors from {len(context_ids) - len(valid_context_ids)} deleted context(s)")
+        total_unique = len(context_ids)
+        missing_unique = total_unique - len(valid_context_ids)
+
+        # 100%-orphan signature → almost always DB misconfig, not real orphans.
+        # Sample the missing contextIds so the operator can spot-check.
+        if total_unique > 0 and missing_unique == total_unique:
+            sample = list(context_ids)[:3]
+            print(
+                f"[VECTOR_SERVICE] ⚠⚠ ALL {total_unique} returned vectors classified as orphans — "
+                f"this almost always means the AI service's DB_NAME env points at the WRONG database. "
+                f"Vectors found in S3 but their context rows are missing from Postgres. "
+                f"Sample contextIds the orphan-check could not find: {sample}. "
+                f"Check `DB_NAME` in plurality-market-ai-service/.env matches the backend's DB_NAME.",
+                flush=True,
+            )
+        elif orphaned_count > 0:
+            print(
+                f"[VECTOR_SERVICE] Filtered out {orphaned_count} orphaned vector(s) "
+                f"from {missing_unique} deleted context(s)",
+                flush=True,
+            )
 
         return validated_docs
     
@@ -54,7 +92,7 @@ class VectorService(BaseService):
                 formatted_vector = {
                     "key": vector_data["id"],
                     "data": {"float32": vector_data["vector"]},
-                    "metadata": vector_data["metadata"]
+                    "metadata": self._stamp_namespace(vector_data["metadata"])
                 }
                 formatted_vectors.append(formatted_vector)
             
@@ -78,7 +116,11 @@ class VectorService(BaseService):
                 'returnDistance': True,
                 'returnMetadata': True
             }
-            
+
+            # Always scope to this tenant's namespace (no-op if NAMESPACE_PREFIX
+            # is empty). Caller's filter is preserved and combined.
+            filter_metadata = self._scope_filter(filter_metadata)
+
             # Add server-side filtering if provided
             if filter_metadata:
                 # Convert simple key-value filters to S3 Vectors format

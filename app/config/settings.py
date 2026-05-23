@@ -71,6 +71,12 @@ class Settings:
     # S3 Vectors Configuration
     S3_VECTOR_BUCKET_NAME: str = os.getenv("S3_VECTOR_BUCKET_NAME", "plurality-ocl")
     S3_VECTOR_INDEX_NAME: str = os.getenv("S3_VECTOR_INDEX_NAME", "index")
+
+    # Tenant prefix written into every vector's metadata.namespace and added
+    # to every query filter. Lets the market-* stack share prod's vector DB
+    # without risk of cross-stack reads/writes/deletes. Empty string disables
+    # the prefix entirely (e.g. when the market stack moves to its own bucket).
+    NAMESPACE_PREFIX: str = os.getenv("NAMESPACE_PREFIX", "")
     
     # Google API Configuration
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")

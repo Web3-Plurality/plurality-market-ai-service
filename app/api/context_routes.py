@@ -2,15 +2,15 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from typing import Optional, List
 
 from app.models.schemas import (
-    ContextRequest, ContextResponse, FileUploadResponse, QueryRequest, RagQueryRequest,
-    ProfilePromptRequest, ProfilePromptResponse, SuggestedPrompt,
-    SimilaritySearchRequest, SimilaritySearchResponse, SimilarityResult,
-    AddRagContextRequest, AddRagContextResponse, DeleteContextRequest, DeleteContextResponse,
-    GetContextDataResponse, DeleteAllContextsRequest, DeleteAllContextsResponse
+    ContextRequest, ContextResponse, FileUploadResponse,
+    SimilaritySearchRequest, SimilaritySearchResponse,
+    AddRagContextRequest, AddRagContextResponse,
+    DeleteContextRequest, DeleteContextResponse,
+    DeleteAllContextsRequest, DeleteAllContextsResponse,
+    GetContextDataResponse,
 )
 from app.api.dependencies import validate_api_key
 from app.services.context_service import context_service
-from app.services.prompt_service import prompt_service
 from app.services.vector_service import vector_service
 
 # Create router for context endpoints
@@ -56,115 +56,6 @@ async def upload_file(
     """
     return await context_service.upload_file(file=file, userId=userId, profileId=profileId, contextId=contextId)
 
-@context_router.post("/query-contexts")
-async def query_contexts(
-    query_request: QueryRequest,
-    _api_key: str = Depends(validate_api_key)
-):
-    """
-    Query contexts for a specific user with chat history and returns a chat response (Used by: Chat Agent)
-
-    Headers:
-    - X-API-Key: API key for authentication
-
-    Body:
-    - userId: User's unique identifier
-    - profileId: Profile's unique identifier
-    - query: Question or query text
-    - k: Number of relevant contexts to retrieve (optional, default: 5)
-    - chatHistory: Previous conversation history (optional)
-    - contextSummary: Summary of available contexts (optional)
-    - enableWebSearch: Enable web search tool (optional, default: false)
-    - enableUrlExtraction: Enable URL extraction tool (optional, default: false)
-    """
-    return await context_service.query_contexts(query_request)
-
-@context_router.post("/rag-query")
-async def rag_query(
-    query_request: RagQueryRequest,
-    _api_key: str = Depends(validate_api_key)
-):
-    """
-    RAG query endpoint that use llm processing and context (if exists) to return optimized prompt (Used by: Extension and MCP)
-    This is the LEGACY implementation - use /agentic-rag-query for the new agentic workflow
-
-    Headers:
-    - X-API-Key: API key for authentication
-
-    Body:
-    - userId: User's unique identifier
-    - profileId: Profile's unique identifier
-    - query: Question or query text
-    - k: Number of relevant contexts to retrieve (optional, default: 5)
-    - chatHistory: Previous conversation history (optional)
-    - contextSummary: Summary of available contexts (optional)
-    - attachContextSummary: Attach context summary to the prompt (optional, default: false)
-    """
-    return await context_service.rag_query(query_request)
-
-@context_router.post("/agentic-rag-query")
-async def agentic_rag_query(
-    query_request: RagQueryRequest,
-    _api_key: str = Depends(validate_api_key)
-):
-    """
-    NEW Agentic RAG query endpoint using LangGraph-based workflow (Used by: Extension and MCP)
-
-    This endpoint uses a state machine approach that:
-    - Automatically classifies query type (simple, vague, conversational, complex)
-    - Dynamically expands vague queries using context
-    - Checks context relevance and filters irrelevant results
-    - Detects query language automatically
-    - Routes queries through the optimal processing path
-
-    Headers:
-    - X-API-Key: API key for authentication
-
-    Body:
-    - userId: User's unique identifier
-    - profileId: Profile's unique identifier
-    - query: Question or query text
-    - k: Number of relevant contexts to retrieve (optional, default: 5)
-    - chatHistory: Previous conversation history (optional)
-    - contextSummary: Summary of available contexts (optional)
-    - attachContextSummary: Attach context summary to the prompt (optional, default: false)
-    - platform: Target platform (chatGPT, perplexity, gemini) (optional, default: chatGPT)
-
-    Response includes:
-    - optimized_prompt: The final optimized prompt
-    - context: Retrieved relevant context
-    - sources: List of source documents
-    - workflow_metadata: Information about the workflow execution (query_type, language, etc.)
-    """
-    return await context_service.agentic_rag_query(query_request)
-
-
-@context_router.post("/agentic-query")
-async def agentic_query_contexts(
-    query_request: QueryRequest,
-    _api_key: str = Depends(validate_api_key)
-):
-    """
-    NEW Agentic query endpoint using LangGraph-based workflow (Used by: Extension and MCP)
-    """
-    return await context_service.agentic_query_contexts(query_request)
-
-@context_router.post("/generate-profile-prompts", response_model=ProfilePromptResponse)
-async def generate_profile_prompts(
-    profile_request: ProfilePromptRequest,
-    _api_key: str = Depends(validate_api_key)
-):
-    """
-    Generate suggested prompts for a profile based on its name (Used by: Chat Agent, Dashboard)
-    
-    Headers:
-    - X-API-Key: API key for authentication
-    
-    Body:
-    - profileName: Name of the profile to generate prompts for
-    """
-    return await prompt_service.generate_profile_prompts(profile_request)
-
 @context_router.post("/add-rag-context", response_model=AddRagContextResponse)
 async def add_rag_context(
     rag_request: AddRagContextRequest,
@@ -183,16 +74,6 @@ async def add_rag_context(
     """
     return await context_service.add_rag_context(rag_request)
 
-
-@context_router.post("/get-context")
-async def get_context(
-    query_request: RagQueryRequest,
-    _api_key: str = Depends(validate_api_key)
-):
-    """
-    Get raw matching context for a specific user (For MCP)
-    """
-    return await context_service.get_context(query_request)
 
 
 @context_router.post("/similarity-search", response_model=SimilaritySearchResponse)

@@ -16,7 +16,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.services.base_service import BaseService
 from app.services.vector_service import VectorService
 from app.services.database_service import DatabaseService
-from app.services.agentic_rag_service import AgenticRAGService
 from app.models.schemas import ContextRequest, ContextResponse, FileUploadResponse, QueryRequest, AddRagContextRequest, AddRagContextResponse, RagQueryRequest, DeleteContextRequest, DeleteContextResponse, GetContextDataResponse, DeleteAllContextsRequest, DeleteAllContextsResponse
 from app.config.settings import settings
 from app.utils.file_utils import (
@@ -102,7 +101,6 @@ class ContextService(BaseService):
         super().__init__()
         self.vector_service = VectorService()
         self.database_service = DatabaseService()
-        self.agentic_rag_service = AgenticRAGService()
         # Initialize chunk content store for large files
         self.chunk_content_store = {}
         # Backend webhook configuration
@@ -1072,56 +1070,6 @@ Please provide a comprehensive, detailed response that thoroughly addresses the 
         except Exception as e:
             print(f"[ERROR] Failed to query contexts for user {query_request.userId}: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error querying contexts: {str(e)}")
-
-    async def agentic_query_contexts(self, query_request: QueryRequest) -> dict:
-        """
-        Alternative agentic implementation of query_contexts using LangGraph workflow
-        This method provides the same functionality as query_contexts but with a
-        modular, state-machine-based architecture for better maintainability.
-        
-        To use this instead of the regular query_contexts, you can either:
-        1. Call this method directly: context_service.agentic_query_contexts(...)
-        2. Or create a separate endpoint in your API routes
-        
-        Returns the same response format as query_contexts
-        """
-        from app.services.agentic_query_service import AgenticQueryService
-        
-        # Lazy initialization of agentic query service
-        if not hasattr(self, '_agentic_query_service'):
-            self._agentic_query_service = AgenticQueryService(context_service=self)
-        
-        return await self._agentic_query_service.process_query(
-            query_request=query_request,
-        )
-
-    async def agentic_rag_query(self, query_request: RagQueryRequest) -> dict:
-        """
-        Agentic RAG query endpoint using LangGraph-based workflow
-        This is the NEW implementation that dynamically decides the best approach
-        """
-        try:
-            print(f"[AGENTIC_RAG_QUERY] User: {query_request.userId}")
-
-            # Use the agentic RAG service
-            result = await self.agentic_rag_service.process_rag_query(
-                user_query=query_request.query,
-                user_id=query_request.userId,
-                profile_id=query_request.profileId or "",
-                chat_history=query_request.chatHistory or [],
-                context_summary=query_request.contextSummary or "",
-                k=query_request.k,
-                attach_context_summary=query_request.attachContextSummary,
-                platform=query_request.platform
-            )
-
-            print(f"[AGENTIC_RAG_QUERY] Completed successfully. Workflow: {result['workflow_metadata']['query_type']}")
-
-            return result
-
-        except Exception as e:
-            print(f"[ERROR] Failed to process agentic RAG query for user {query_request.userId}: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error processing agentic RAG query: {str(e)}")
 
     async def rag_query(self, query_request: RagQueryRequest) -> dict:
         """
