@@ -40,10 +40,6 @@ class ContextResponse(BaseModel):
     extractedDescription: str  # Add extracted description to response
     vectorIds: List[str]  # Vector IDs stored in S3 Vectors
 
-class FileUploadRequest(BaseModel):
-    userId: str
-    profileId: str
-
 class FileUploadResponse(BaseModel):
     message: str
     contextId: str
@@ -53,18 +49,6 @@ class FileUploadResponse(BaseModel):
     createdAt: str
     extractedTitle: str
     extractedDescription: str  # Add extracted description to response
-
-class ProfilePromptRequest(BaseModel):
-    profileName: str
-
-class SuggestedPrompt(BaseModel):
-    title: str
-    prompt: str
-    description: str
-
-class ProfilePromptResponse(BaseModel):
-    profileName: str
-    suggestedPrompts: List[SuggestedPrompt]
 
 # New schema models for chat history endpoint
 class ChatMessage(BaseModel):
