@@ -50,8 +50,10 @@ class BaseService:
         )
         
         # Initialize LLM with tool support
+        # gemini-2.0-flash was retired; gemini-2.5-flash is the current generally
+        # available fast model. Same family, same multimodal + tool-use surface.
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             api_key=settings.GOOGLE_API_KEY,
             temperature=0.7,
             max_output_tokens=32768
