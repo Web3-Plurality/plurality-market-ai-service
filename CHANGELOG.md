@@ -1,3 +1,10 @@
+# 1.0.0 (2026-08-07)
+
+
+### Features
+
+* initial marketplace release ([4a6652e](https://github.com/Web3-Plurality/plurality-market-ai-service/commit/4a6652ee97b9710051d626bfacd592ef872bbd75))
+
 ## [1.20.2](https://github.com/Web3-Plurality/plurality-ai-service/compare/v1.20.1...v1.20.2) (2026-02-19)
 
 
