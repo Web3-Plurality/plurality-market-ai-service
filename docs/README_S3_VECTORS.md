@@ -83,7 +83,7 @@ Your AWS IAM user/role needs the following permissions:
 
 3. **Run the service**:
    ```bash
-   uvicorn main:app --reload
+   uvicorn app.main:app --port 8001 --reload
    ```
 
 ## Key Features
@@ -111,55 +111,34 @@ Your AWS IAM user/role needs the following permissions:
 
 ## API Usage
 
-The API endpoints remain the same:
+All endpoints live under the `/rag` prefix on port **8001**:
 
 ### Upload File
 ```bash
-curl -X POST "http://localhost:8000/upload" \
+curl -X POST "http://localhost:8001/rag/upload-file" \
   -H "X-API-Key: your-api-key" \
   -F "file=@document.json" \
   -F "userId=user123" \
-  -F "profileId=profile456"
+  -F "profileId=profile456" \
+  -F "contextId=context789"
 ```
 
 ### Add Context
 ```bash
-curl -X POST "http://localhost:8000/context" \
+curl -X POST "http://localhost:8001/rag/add-context" \
   -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user123",
     "profileId": "profile456",
+    "contextId": "context789",
     "context": "Your context content here"
   }'
 ```
 
-### Query Contexts with Chat History
+### Similarity Search
 ```bash
-curl -X POST "http://localhost:8000/query" \
-  -H "X-API-Key: your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "user123",
-    "profileId": "profile456",
-    "query": "What did you say about machine learning earlier?",
-    "k": 5,
-    "chatHistory": [
-      {
-        "user": "What is machine learning?",
-        "assistant": "Machine learning is a subset of AI that enables computers to learn and improve from data without being explicitly programmed..."
-      },
-      {
-        "user": "Can you give me examples?",
-        "assistant": "Sure! Common examples include recommendation systems like Netflix, image recognition in photos, and voice assistants like Siri..."
-      }
-    ]
-  }'
-```
-
-### Query Contexts (Simple)
-```bash
-curl -X POST "http://localhost:8000/query" \
+curl -X POST "http://localhost:8001/rag/similarity-search" \
   -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{

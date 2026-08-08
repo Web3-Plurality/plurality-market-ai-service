@@ -371,7 +371,7 @@ class VectorService(BaseService):
                 batch_start_time = time.time()
                 try:
                     # Call S3 delete_vectors API
-                    response = self.s3vectors_client.delete_vectors(
+                    self.s3vectors_client.delete_vectors(
                         vectorBucketName=self.vector_bucket_name,
                         indexName=self.vector_index_name,
                         keys=batch
@@ -379,14 +379,7 @@ class VectorService(BaseService):
                     batch_elapsed = time.time() - batch_start_time
                     deleted_count += len(batch)
 
-                    # Log the response to understand what S3 returns
                     print(f"[DELETE_VECTORS] Batch {batch_num}/{total_batches}: Deleted {len(batch)} vectors in {batch_elapsed:.2f}s (total: {deleted_count}/{len(vector_keys)})")
-                    print(f"[DELETE_VECTORS] S3 Response: {response}")
-                    print(f"[DELETE_VECTORS] Response type: {type(response)}")
-                    if isinstance(response, dict):
-                        print(f"[DELETE_VECTORS] Response keys: {response.keys()}")
-                        for key, value in response.items():
-                            print(f"[DELETE_VECTORS]   {key}: {value}")
 
                 except Exception as delete_error:
                     print(f"[DELETE_VECTORS] Error during batch {batch_num}/{total_batches} deletion: {delete_error}")

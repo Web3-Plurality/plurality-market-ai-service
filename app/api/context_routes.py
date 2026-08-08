@@ -162,10 +162,3 @@ async def get_context_data(
     - limit: Max number of chunks to return (default: 20, adjust based on agent context window)
     """
     return await context_service.get_context_data(context_id=contextId, user_id=userId, start_chunk=startChunk, limit=limit)
-
-@context_router.get("/health")
-async def health_check():
-    """
-    Health check endpoint
-    """
-    return {"status": "healthy", "service": "context-service"}

@@ -39,7 +39,7 @@ client = boto3.client(
     aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
 )
 
-bucket = os.getenv("S3_VECTOR_BUCKET_NAME", "plurality-ocl")
+bucket = os.getenv("S3_VECTOR_BUCKET_NAME", "your-vector-bucket")
 index = os.getenv("S3_VECTOR_INDEX_NAME", "index")
 print(f"Looking up {len(keys)} key(s) in bucket={bucket} index={index}\n")
 

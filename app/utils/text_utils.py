@@ -2,8 +2,7 @@
 Text processing utility functions for chat history, parsing, and formatting
 """
 
-from typing import List, Dict, Any
-import re
+from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
@@ -147,87 +146,6 @@ def chunk_content_by_bytes(content: str, metadata: dict, max_total_bytes: int = 
     return verified_chunks
 
 
-def get_chunk_sort_key(doc: dict) -> tuple:
-    """
-    Extract file ID and chunk number from document ID for proper sorting.
-    This ensures chunks from the same file are grouped together and sorted in order.
-
-    Args:
-        doc: Document dictionary with 'key' field in format {fileId}_chunk_{i}
-
-    Returns:
-        tuple: (fileId, chunk_number) for sorting, or ('zzz', inf) for non-chunk documents
-    """
-    doc_id = doc.get('key', '')
-    if '_chunk_' in doc_id:
-        try:
-            # Split to get fileId and chunk number
-            parts = doc_id.split('_chunk_')
-            if len(parts) == 2:
-                file_id = parts[0]
-                chunk_num = int(parts[1])
-                return (file_id, chunk_num)
-        except (ValueError, IndexError):
-            pass  # Fall through to default return
-
-    # Put non-chunk docs at the end
-    return ('zzz' * 50, float('inf'))  # Use long string to ensure it's last
-
-
-def trim_to_complete_sentences(text: str) -> str:
-    """
-    Trim text to start and end with complete sentences.
-    Removes incomplete sentences from both the beginning and end.
-
-    Args:
-        text: The text to trim
-
-    Returns:
-        str: Text with only complete sentences, or original text if no sentence markers found
-    """
-    if not text:
-        return text
-
-    text = text.strip()
-
-    # Find the first occurrence of sentence-ending punctuation (for start trimming)
-    first_period = text.find('.')
-    first_exclamation = text.find('!')
-    first_question = text.find('?')
-
-    # Get the minimum valid position (the first sentence ending)
-    first_sentence_positions = [pos for pos in [first_period, first_exclamation, first_question] if pos != -1]
-    first_sentence_end = min(first_sentence_positions) if first_sentence_positions else -1
-
-    # Find the last occurrence of sentence-ending punctuation (for end trimming)
-    last_period = text.rfind('.')
-    last_exclamation = text.rfind('!')
-    last_question = text.rfind('?')
-
-    # Get the maximum position (the last sentence ending)
-    last_sentence_end = max(last_period, last_exclamation, last_question)
-
-    # If we found at least one sentence ending
-    if first_sentence_end != -1 and last_sentence_end != -1:
-        # Trim from the start of the first complete sentence (after the first punctuation + space)
-        # and to the end of the last complete sentence (include the punctuation)
-        start_pos = first_sentence_end + 1
-
-        # Skip any whitespace after the first sentence ending
-        while start_pos < len(text) and text[start_pos].isspace():
-            start_pos += 1
-
-        # If start position is before or at the last sentence end, we have content
-        if start_pos <= last_sentence_end:
-            return text[start_pos:last_sentence_end + 1].strip()
-        elif first_sentence_end == last_sentence_end:
-            # Only one sentence found, return text up to that sentence
-            return text[:last_sentence_end + 1].strip()
-
-    # If no sentence ending found, return original text
-    return text
-
-
 def parse_llm_response(response_text: str) -> dict:
     """Parse structured LLM response into sections"""
     sections = {
@@ -282,54 +200,4 @@ def parse_llm_response(response_text: str) -> dict:
 
     return sections
 
-
-def parse_query_data_response(response_text: str) -> dict:
-    """
-    Parse the structured LLM response for query/data separation
-
-    Args:
-        response_text (str): The LLM response text to parse
-    Returns:
-        dict: Parsed components with query, data, analysis, and confidence
-    """
-    result = {
-        "query": "",
-        "data": "",
-    }
-
-    # Improved parsing logic to handle multi-line DATA and QUERY sections
-    lines = response_text.splitlines()
-    current_section = None
-    buffer = {"query": [], "data": []}
-
-    for line in lines:
-        line = line.strip()
-        # Detect section headers
-        if line.lower().startswith('query:'):
-            current_section = "query"
-            # Capture the rest of the line after 'QUERY:'
-            content = line[len('QUERY:'):].strip()
-            if content:
-                buffer["query"].append(content)
-        elif line.lower().startswith('data:'):
-            current_section = "data"
-            # Capture the rest of the line after 'DATA:'
-            content = line[len('DATA:'):].strip()
-            if content:
-                buffer["data"].append(content)
-        elif current_section and line:
-            # Accumulate lines under the current section
-            buffer[current_section].append(line)
-        # If line is empty, just skip
-
-    # Join the buffered lines for each section
-    for key in ["query", "data"]:
-        value = "\n".join(buffer[key]).strip()
-        # Clean up results - handle "None" values
-        if value.lower() in ["none", "n/a", "not applicable", "empty", "null"]:
-            result[key] = ""
-        else:
-            result[key] = value
-
-    return result
 

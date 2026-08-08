@@ -29,6 +29,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
+# Pre-download NLTK data (same package list as download_nltk_data() in
+# app/config/settings.py) into a system-wide search path so production
+# containers never download at runtime.
+RUN python -m nltk.downloader -d /usr/local/share/nltk_data \
+    punkt averaged_perceptron_tagger averaged_perceptron_tagger_eng \
+    stopwords wordnet omw-1.4
+
 # Copy application code
 COPY . .
 
@@ -42,7 +49,7 @@ EXPOSE 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/ || exit 1
+    CMD curl -f http://localhost:8001/health || exit 1
 
 # Run the application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"] 

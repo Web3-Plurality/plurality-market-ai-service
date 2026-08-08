@@ -1,26 +1,32 @@
-from fastapi import FastAPI, Response
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from app.api.context_routes import context_router
-from app.middleware.metrics_middleware import PrometheusMiddleware
-from app.services.metrics_service import get_metrics
+from app.config.settings import download_nltk_data
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Fetch NLTK data (used by the markdown document loader) at startup rather
+    # than import time, so the app still boots offline / in CI. The Docker image
+    # pre-downloads these packages; this is a no-op there.
+    try:
+        download_nltk_data()
+    except Exception as e:
+        print(f"[WARNING] NLTK data download failed, markdown parsing may degrade: {e}")
+    yield
+
 
 # Initialize FastAPI
 app = FastAPI(
-    title="Plurality AI Context Service",
-    description="A comprehensive RAG (Retrieval-Augmented Generation) service for managing and querying personal knowledge bases",
-    version="1.0.0"
+    title="Plurality Market AI Service",
+    description="Embedding, retrieval, and context-extraction service for marketplace memory buckets: indexes user contexts into a vector store and serves similarity search for the Plurality market stack",
+    version="1.0.0",
+    lifespan=lifespan
 )
-
-# Add Prometheus middleware
-app.add_middleware(PrometheusMiddleware)
 
 # Include routers
 app.include_router(context_router)
-
-# Metrics endpoint for Prometheus
-@app.get("/metrics")
-async def metrics():
-    """Expose Prometheus metrics"""
-    return Response(content=get_metrics(), media_type="text/plain")
 
 @app.get("/health")
 async def health_check():

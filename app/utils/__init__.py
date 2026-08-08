@@ -16,10 +16,7 @@ from .text_utils import (
     estimate_tokens,
     calculate_metadata_bytes,
     chunk_content_by_bytes,
-    get_chunk_sort_key,
-    trim_to_complete_sentences,
-    parse_llm_response,
-    parse_query_data_response
+    parse_llm_response
 )
 
 from .chat_history_utils import (
@@ -28,11 +25,7 @@ from .chat_history_utils import (
 
 from .llm_utils import (
     extract_title_and_description,
-    extract_insights_and_summary,
-    separate_query_and_data,
-    check_context_relevance,
-    check_prompt_language,
-    generate_optimized_llm_prompt
+    extract_insights_and_summary
 )
 
 __all__ = [
@@ -48,18 +41,10 @@ __all__ = [
     'estimate_tokens',
     'calculate_metadata_bytes',
     'chunk_content_by_bytes',
-    'get_chunk_sort_key',
-    'trim_to_complete_sentences',
     'parse_llm_response',
-    'parse_query_data_response',
     # Chat history utilities
     'optimize_chat_history',
     # LLM utilities
     'extract_title_and_description',
-    'extract_insights_and_summary',
-    'separate_query_and_data',
-    'check_context_relevance',
-    'check_prompt_language',
-    'generate_optimized_llm_prompt'
+    'extract_insights_and_summary'
 ]
-

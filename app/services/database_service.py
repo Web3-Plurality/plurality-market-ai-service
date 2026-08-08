@@ -1,14 +1,25 @@
-from app.services.base_service import BaseService
+import psycopg2
+from fastapi import HTTPException
+from app.config.settings import settings
 
 
-class DatabaseService(BaseService):
+class DatabaseService:
     """
     Database service for read-only operations.
     Note: Create/Update operations are now handled by backend-api.
+
+    Standalone on purpose: it only needs Postgres access, so it does not
+    subclass BaseService (which would load the BGE embedding model).
     """
 
-    def __init__(self):
-        super().__init__()
+    def _get_db_connection(self):
+        """Create a database connection"""
+        try:
+            conn = psycopg2.connect(**settings.db_config)
+            return conn
+        except Exception as e:
+            print(f"[DB_ERROR] Failed to connect to database: {e}")
+            raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
 
     def get_vector_ids(self, context_id: str) -> list:
         """Retrieve vector IDs for a context from the database"""
@@ -77,31 +88,6 @@ class DatabaseService(BaseService):
             print(f"[DB_ERROR] Failed to retrieve all vector IDs: {e}")
             return []
 
-    def context_exists(self, context_id: str) -> bool:
-        """Check if a context exists in the database"""
-        try:
-            conn = self._get_db_connection()
-            cursor = conn.cursor()
-
-            select_query = """
-                SELECT COUNT(*)
-                FROM user_context
-                WHERE "contextId" = %s
-            """
-
-            cursor.execute(select_query, (context_id,))
-            result = cursor.fetchone()
-
-            cursor.close()
-            conn.close()
-
-            exists = result[0] > 0 if result else False
-            return exists
-
-        except Exception as e:
-            print(f"[DB_ERROR] Failed to check context existence: {e}")
-            return False
-
     def batch_context_exists(self, context_ids: list) -> set:
         """Check which contexts exist in the database from a list of context IDs.
         Returns a set of context IDs that exist."""
@@ -136,4 +122,4 @@ class DatabaseService(BaseService):
             return set()
 
 # Create database service instance
-database_service = DatabaseService() 
+database_service = DatabaseService()

@@ -2,9 +2,11 @@
 
 FastAPI service that handles vector indexing, retrieval, and LLM-backed query over user memory contexts for the Plurality marketplace stack. Called by `plurality-market-backend` on context add/upload/delete and on the MCP `search_memory` path.
 
+Note on BYOK: user-supplied LLM keys live entirely in the frontend (the browser calls LLM providers directly) — this service always uses the server-side `GOOGLE_API_KEY` for its own extraction/summarization calls.
+
 Stack:
 - **FastAPI** for the HTTP surface (port `8001`)
-- **LangChain + Google Gemini** for LLM calls (`gemini-2.5-flash` default; advanced and preview variants configurable in `base_service.py`)
+- **LangChain + Google Gemini** for LLM calls (`gemini-2.5-flash`, configurable in `base_service.py`)
 - **HuggingFace BGE** (`BAAI/bge-large-en-v1.5`) for embeddings, run locally on CPU
 - **AWS S3 Vectors** for the vector store (multi-tenant via `NAMESPACE_PREFIX`)
 - **Postgres** for context-row lookups and orphan-vector validation
@@ -101,15 +103,10 @@ sudo apt-get install antiword libreoffice pandoc libmagic1
 # LLM
 GOOGLE_API_KEY=your_google_api_key
 
-# Optional: Google Custom Search (used by the web_search agent tool;
-# DuckDuckGo is the fallback if these are unset)
-GOOGLE_SEARCH_API_KEY=your_google_search_api_key
-GOOGLE_SEARCH_ENGINE_ID=your_google_search_engine_id
-
 # AWS S3 Vectors (vector store)
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 S3_VECTOR_BUCKET_NAME=your_s3_vector_bucket_name
 S3_VECTOR_INDEX_NAME=your_s3_vector_index_name
 
@@ -189,7 +186,6 @@ See the Setup `.env` block above for the complete list. A quick map by purpose:
 | Group | Variables |
 |---|---|
 | LLM | `GOOGLE_API_KEY` |
-| Web-search tool | `GOOGLE_SEARCH_API_KEY`, `GOOGLE_SEARCH_ENGINE_ID` (optional — falls back to DuckDuckGo) |
 | Vector store | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_VECTOR_BUCKET_NAME`, `S3_VECTOR_INDEX_NAME`, `NAMESPACE_PREFIX` |
 | Postgres | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` |
 | Auth | `CONTEXT_API_KEY` (gate on inbound calls), `BACKEND_API_URL`, `BACKEND_API_KEY` (for outbound webhook callbacks) |

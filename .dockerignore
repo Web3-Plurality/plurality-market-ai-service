@@ -2,6 +2,11 @@
 .git
 .gitignore
 
+# Secrets — never bake env files into images
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__
 *.pyc
