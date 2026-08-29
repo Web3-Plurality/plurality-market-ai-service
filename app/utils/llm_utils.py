@@ -3,9 +3,16 @@ LLM-based utility functions for text analysis and generation
 These functions require an LLM instance to be passed as a parameter
 """
 
+import re
 from typing import Any
 from langchain_core.messages import HumanMessage
 from app.utils.text_utils import parse_llm_response
+
+
+def _strip_markdown(line: str) -> str:
+    """Drop markdown decoration chat models like to wrap labels in
+    ("**TITLE:**", "## Title:", "`TITLE:`") so label matching is reliable."""
+    return re.sub(r'[*_`#>]+', '', line).strip()
 
 
 async def extract_title_and_description(llm: Any, content: str, filename: str = None) -> dict:
@@ -34,26 +41,39 @@ async def extract_title_and_description(llm: Any, content: str, filename: str = 
         llm_response = await llm.ainvoke([HumanMessage(content=title_and_desc_prompt)])
         response_text = llm_response.content.strip()
         
-        # Parse the response to extract title and description
+        # Parse the response to extract title and description. Matching is
+        # case-insensitive and markdown-tolerant: Gemini frequently answers
+        # "**TITLE:** Foo" or uses "-"/"*" bullets, which the previous exact
+        # match silently missed — every such context ended up "untitled".
         lines = response_text.split('\n')
         extracted_title = ""
         extracted_description = ""
-        
+
         # Find title
         for line in lines:
-            if line.strip().startswith('TITLE:'):
-                extracted_title = line.replace('TITLE:', '').strip()
+            norm = _strip_markdown(line)
+            if norm.upper().startswith('TITLE:'):
+                extracted_title = norm[len('TITLE:'):].strip()
                 break
-        
-        # Find description (collect all bullet points)
+
+        # Find description (collect all bullet points, any bullet style)
         description_started = False
         description_lines = []
         for line in lines:
-            if line.strip() == 'DESCRIPTION:':
+            raw = line.strip()
+            norm = _strip_markdown(line)
+            if norm.upper().startswith('DESCRIPTION:'):
                 description_started = True
+                rest = norm[len('DESCRIPTION:'):].strip()
+                if rest:
+                    description_lines.append('• ' + rest.lstrip('•-* ').strip())
                 continue
-            if description_started and line.strip().startswith('•'):
-                description_lines.append(line.strip())
+            # Detect the bullet on the RAW line — _strip_markdown would eat a
+            # leading "*" bullet along with any bold markers.
+            if description_started and raw and raw[0] in '•-*':
+                text = _strip_markdown(raw.lstrip('•-* '))
+                if text:
+                    description_lines.append('• ' + text)
         
         extracted_description = '\n'.join(description_lines) if description_lines else ""
         
