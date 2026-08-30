@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.1.0...v1.2.0) (2026-08-30)
+
+
+### Features
+
+* **llm:** make title and description extraction tolerant to markdown and bullet styles ([1e2ab3d](https://github.com/Web3-Plurality/plurality-market-ai-service/commit/1e2ab3d0cbf6d594bf6e8264a89b61892ca19c42))
+
 # [1.1.0](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.0.1...v1.1.0) (2026-08-15)
 
 
