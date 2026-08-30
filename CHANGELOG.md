@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.2.0...v1.2.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* use GITHUB_TOKEN and a version-bump PR instead of the GHCR_TOKEN PAT ([179322c](https://github.com/Web3-Plurality/plurality-market-ai-service/commit/179322c717d7338b59aea9755584c318761c81ef))
+
 # [1.2.0](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.1.0...v1.2.0) (2026-08-30)
 
 
