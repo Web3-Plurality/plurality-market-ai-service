@@ -29,18 +29,18 @@ class BaseService:
             encode_kwargs={'normalize_embeddings': True}  # BGE models benefit from normalization
         )
 
-        # Initialize LLM
-        # gemini-2.0-flash was retired; gemini-2.5-flash is the current generally
-        # available fast model. Same family, same multimodal + tool-use surface.
+        # Initialize LLM. Model IDs come from settings (GEMINI_MODEL /
+        # GEMINI_MODEL_ADVANCED) — Google retires generations per account, so
+        # hard-coding one here has already bitten us twice (2.0 -> 2.5 -> 3.x).
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model=settings.GEMINI_MODEL,
             api_key=settings.GOOGLE_API_KEY,
             temperature=0.7,
             max_output_tokens=32768
         )
 
         self.llm_advanced = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model=settings.GEMINI_MODEL_ADVANCED,
             api_key=settings.GOOGLE_API_KEY,
             temperature=0.7,
             max_output_tokens=32768  # Increased from 4096 to handle large data separation (3000+ words)

@@ -39,7 +39,9 @@ async def extract_title_and_description(llm: Any, content: str, filename: str = 
     try:
         # Use HumanMessage for chat model
         llm_response = await llm.ainvoke([HumanMessage(content=title_and_desc_prompt)])
-        response_text = llm_response.content.strip()
+        # .text flattens content blocks (langchain-core >=1 returns a list of
+        # {"type": "text", ...} blocks for Gemini, not a plain string).
+        response_text = llm_response.text.strip()
         
         # Parse the response to extract title and description. Matching is
         # case-insensitive and markdown-tolerant: Gemini frequently answers
@@ -142,7 +144,9 @@ async def extract_insights_and_summary(llm: Any, chat_text: str) -> dict:
     try:
         # Use HumanMessage for chat model
         llm_response = await llm.ainvoke([HumanMessage(content=insights_prompt)])
-        response_text = llm_response.content.strip()
+        # .text flattens content blocks (langchain-core >=1 returns a list of
+        # {"type": "text", ...} blocks for Gemini, not a plain string).
+        response_text = llm_response.text.strip()
 
         # Parse the response to extract different sections
         sections = parse_llm_response(response_text)

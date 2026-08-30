@@ -118,7 +118,8 @@ async def optimize_chat_history(
                 total_tokens_used["output_tokens"] += output_tokens
                 total_tokens_used["total_tokens"] += input_tokens + output_tokens
             
-            summary = summary_response.content
+            # .text flattens content blocks (list under langchain-core >=1).
+            summary = summary_response.text
             summary_tokens = estimate_tokens(summary)
             
             print(f"[CHAT_OPTIMIZER] Summary created ({summary_tokens} tokens)")

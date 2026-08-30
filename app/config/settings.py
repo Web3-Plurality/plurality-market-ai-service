@@ -74,6 +74,13 @@ class Settings:
 
     # Google API Configuration
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
+    # Gemini model IDs. Configurable because Google gates model generations
+    # per account: keys from accounts created after the mid-2026 key
+    # migration ("AQ." keys) get 404 "no longer available to new users" on
+    # gemini-2.x, so a hard-coded model breaks on key rotation. Defaults to
+    # the current stable fast model; GEMINI_MODEL_ADVANCED falls back to it.
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+    GEMINI_MODEL_ADVANCED: str = os.getenv("GEMINI_MODEL_ADVANCED") or os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
     # Application Settings
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
