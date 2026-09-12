@@ -2,14 +2,18 @@
 
 FastAPI service that handles vector indexing, retrieval, and LLM-backed query over user memory contexts for the Plurality marketplace stack. Called by `plurality-market-backend` on context add/upload/delete and on the MCP `search_memory` path.
 
-Note on BYOK: user-supplied LLM keys live entirely in the frontend (the browser calls LLM providers directly) — this service always uses the server-side `GOOGLE_API_KEY` for its own extraction/summarization calls.
+Note on BYOK: user-supplied LLM keys live entirely in the frontend (the browser calls LLM providers directly); this service always uses the server-side `GOOGLE_API_KEY` for its own extraction/summarization calls.
 
 Stack:
 - **FastAPI** for the HTTP surface (port `8001`)
-- **LangChain + Google Gemini** for LLM calls (`gemini-2.5-flash`, configurable in `base_service.py`)
+- **LangChain + Google Gemini** for LLM calls (model id from `GEMINI_MODEL`, default `gemini-3.6-flash`; Google retires ids for new accounts, so bump the env var when a 404 "no longer available to new users" shows up)
 - **HuggingFace BGE** (`BAAI/bge-large-en-v1.5`) for embeddings, run locally on CPU
 - **AWS S3 Vectors** for the vector store (multi-tenant via `NAMESPACE_PREFIX`)
 - **Postgres** for context-row lookups and orphan-vector validation
+
+## Skills
+
+Unchanged for the Skills Marketplace: a Skill's instructions live in the backend (the `skillInstructions` column on `user_ai_profile`) and are not vectorised; this service only indexes the bucket's memory (contexts).
 
 ## Prerequisites
 
@@ -20,7 +24,7 @@ Stack:
 
 ## Setup
 
-1. Clone the repository (assuming you're working inside the market stack monorepo layout — otherwise replace the URL with your remote):
+1. Clone the repository (assuming you're working inside the market stack monorepo layout; otherwise replace the URL with your remote):
 
 ```bash
 git clone <your-remote-for-plurality-market-ai-service>
@@ -131,7 +135,7 @@ BACKEND_API_KEY=shared_secret_for_webhook_callbacks
 
 ## Running the Application
 
-Start the FastAPI server on port **8001** (the market stack's AI service port — keeps it
+Start the FastAPI server on port **8001** (the market stack's AI service port; keeps it
 out of collision with prod's AI service on 8000).
 
 Use the venv's Python directly with `-m uvicorn`. This bypasses PATH entirely and is
@@ -159,7 +163,7 @@ The API will be available at:
 - API endpoints: http://localhost:8001
 - API documentation: http://localhost:8001/docs
 
-> The `--port 8001` flag is **required** — uvicorn defaults to 8000 if you omit it, which
+> The `--port 8001` flag is **required**: uvicorn defaults to 8000 if you omit it, which
 > collides with the prod AI service and breaks `market-backend`'s `AI_SERVICE_URL`. Always
 > include it when restarting.
 
@@ -168,7 +172,7 @@ The API will be available at:
 If you see this with a traceback pointing at a *different* venv's `site-packages`
 (e.g. `test-project\.venv\Lib\site-packages\uvicorn`), uvicorn is being loaded from the
 wrong Python install. This happens when `uvicorn` resolves on PATH to another project's
-venv. Use the explicit `.\venv\Scripts\python.exe -m uvicorn` form above — it ignores
+venv. Use the explicit `.\venv\Scripts\python.exe -m uvicorn` form above; it ignores
 PATH entirely and forces uvicorn to load from *this* project's venv.
 
 If the explicit form gives the same error, the AI service's venv itself is missing the
