@@ -13,7 +13,7 @@ Stack:
 
 ## Skills
 
-Unchanged for the Skills Marketplace: a Skill's instructions live in the backend (the `skillInstructions` column on `user_ai_profile`) and are not vectorised; this service only indexes the bucket's memory (contexts).
+A bucket's optional Skill instructions live in the backend (the `skillInstructions` column on `user_ai_profile`) and are not vectorised; this service only indexes the bucket's memory (contexts).
 
 ## Prerequisites
 
@@ -106,6 +106,9 @@ sudo apt-get install antiword libreoffice pandoc libmagic1
 ```env
 # LLM
 GOOGLE_API_KEY=your_google_api_key
+# Optional model overrides (defaults: gemini-3.6-flash; ADVANCED falls back to GEMINI_MODEL)
+GEMINI_MODEL=gemini-3.6-flash
+GEMINI_MODEL_ADVANCED=
 
 # AWS S3 Vectors (vector store)
 AWS_ACCESS_KEY_ID=your_aws_access_key
@@ -160,7 +163,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 The API will be available at:
-- API endpoints: http://localhost:8001
+- API endpoints: http://localhost:8001 (all routes live under the `/rag` prefix, e.g. `/rag/add-context`)
 - API documentation: http://localhost:8001/docs
 
 > The `--port 8001` flag is **required**: uvicorn defaults to 8000 if you omit it, which
@@ -189,7 +192,7 @@ See the Setup `.env` block above for the complete list. A quick map by purpose:
 
 | Group | Variables |
 |---|---|
-| LLM | `GOOGLE_API_KEY` |
+| LLM | `GOOGLE_API_KEY`, `GEMINI_MODEL`, `GEMINI_MODEL_ADVANCED` |
 | Vector store | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_VECTOR_BUCKET_NAME`, `S3_VECTOR_INDEX_NAME`, `NAMESPACE_PREFIX` |
 | Postgres | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` |
 | Auth | `CONTEXT_API_KEY` (gate on inbound calls), `BACKEND_API_URL`, `BACKEND_API_KEY` (for outbound webhook callbacks) |
