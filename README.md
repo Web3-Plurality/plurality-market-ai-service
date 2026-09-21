@@ -13,7 +13,8 @@ Stack:
 
 ## Skills
 
-A bucket's optional Skill instructions live in the backend (the `skillInstructions` column on `user_ai_profile`) and are not vectorised; this service only indexes the bucket's memory (contexts).
+
+Unchanged for the Skills Marketplace: a Skill's instructions live in the backend (the `skillInstructions` column on `user_ai_profile`) and are not vectorised; this service only indexes the bucket's memory (contexts).
 
 ## Prerequisites
 

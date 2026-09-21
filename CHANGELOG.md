@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.2.1...v1.2.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **llm:** make the Gemini model configurable and move to the google-genai client ([481e110](https://github.com/Web3-Plurality/plurality-market-ai-service/commit/481e110f3d774fe22a46444e56cacbc3f8e310e6))
+
 ## [1.2.1](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.2.0...v1.2.1) (2026-08-30)
 
 
