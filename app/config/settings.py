@@ -68,9 +68,11 @@ class Settings:
 
     # Tenant prefix written into every vector's metadata.namespace and added
     # to every query filter. Lets the market-* stack share prod's vector DB
-    # without risk of cross-stack reads/writes/deletes. Empty string disables
-    # the prefix entirely (e.g. when the market stack moves to its own bucket).
-    NAMESPACE_PREFIX: str = os.getenv("NAMESPACE_PREFIX", "")
+    # without risk of cross-stack reads/writes/deletes. Defaults to "market:"
+    # so a machine with the var UNSET can never silently write into the
+    # shared keyspace; set it to an explicit empty string only on a bucket
+    # dedicated to this stack.
+    NAMESPACE_PREFIX: str = os.getenv("NAMESPACE_PREFIX", "market:")
 
     # Google API Configuration
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
