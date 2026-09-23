@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.2.2...v1.2.3) (2026-09-23)
+
+
+### Bug Fixes
+
+* **config:** default gemini model and namespace_prefix; update env docs ([8249632](https://github.com/Web3-Plurality/plurality-market-ai-service/commit/824963215cb72567a1a3b4ec5a72e02bbf934d07))
+
 ## [1.2.2](https://github.com/Web3-Plurality/plurality-market-ai-service/compare/v1.2.1...v1.2.2) (2026-08-30)
 
 
