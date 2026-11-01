@@ -163,6 +163,11 @@ class ContextService(BaseService):
 
             # Generate unique IDs for each chunk and prepare vector data
             vectors_to_store = []
+            # Chunks that failed to embed/process. A failed chunk means the
+            # content is NOT fully searchable, so the final status must be
+            # 'error', never 'completed' - a completed-but-incomplete context
+            # would pass the mint gate with missing content.
+            failed_chunks = 0
 
             for i, chunk_content in enumerate(content_chunks):
                 try:
@@ -179,6 +184,7 @@ class ContextService(BaseService):
                         embedding = await self._embed_text_async(chunk_content)
                     except Exception as embed_error:
                         print(f"[BACKGROUND_PROCESSING] Embedding failed for chunk {i}: {embed_error}")
+                        failed_chunks += 1
                         continue  # Skip this chunk but continue processing others
 
                     vectors_to_store.append({
@@ -216,6 +222,7 @@ class ContextService(BaseService):
 
                 except Exception as chunk_error:
                     print(f"[BACKGROUND_PROCESSING] Failed to process chunk {i}: {chunk_error}")
+                    failed_chunks += 1
                     continue  # Skip this chunk but continue processing others
             
             # Store vectors in S3 Vectors
@@ -237,14 +244,26 @@ class ContextService(BaseService):
 
                     print(f"[BACKGROUND_PROCESSING] Successfully stored all vectors for file {fileId}")
 
-                    # Send webhook notification to backend (success) - backend handles DB updates
-                    await self._send_webhook_notification(
-                        userId=userId,
-                        contextId=fileId,
-                        status='completed',
-                        vectorIds=all_vector_ids,
-                        processingProgress=100
-                    )
+                    if failed_chunks:
+                        # Partial failure IS failure: some content never made
+                        # it into the index, so the item must show as errored
+                        # (which also blocks minting an incomplete bucket).
+                        await self._send_webhook_notification(
+                            userId=userId,
+                            contextId=fileId,
+                            status='error',
+                            errorMessage=f"{failed_chunks} of {len(content_chunks)} chunks failed to index. Delete this item and add it again.",
+                            vectorIds=all_vector_ids
+                        )
+                    else:
+                        # Send webhook notification to backend (success) - backend handles DB updates
+                        await self._send_webhook_notification(
+                            userId=userId,
+                            contextId=fileId,
+                            status='completed',
+                            vectorIds=all_vector_ids,
+                            processingProgress=100
+                        )
 
                 except Exception as store_error:
                     print(f"[BACKGROUND_PROCESSING] Vector storage failed for file {fileId}: {store_error}")
@@ -261,13 +280,25 @@ class ContextService(BaseService):
             else:
                 print(f"[BACKGROUND_PROCESSING] No vectors to store for file {fileId}")
 
-                # Send webhook notification to backend (completed with no vectors) - backend handles DB updates
-                await self._send_webhook_notification(
-                    userId=userId,
-                    contextId=fileId,
-                    status='completed',
-                    vectorIds=[]
-                )
+                if content_chunks:
+                    # There WAS content but every chunk failed - that is a
+                    # failed indexing run, not a success with zero vectors.
+                    # Reporting 'completed' here let unsearchable items pass
+                    # the mint gate.
+                    await self._send_webhook_notification(
+                        userId=userId,
+                        contextId=fileId,
+                        status='error',
+                        errorMessage=f"All {len(content_chunks)} chunks failed to index. Delete this item and add it again."
+                    )
+                else:
+                    # Genuinely empty input: nothing to index, nothing failed.
+                    await self._send_webhook_notification(
+                        userId=userId,
+                        contextId=fileId,
+                        status='completed',
+                        vectorIds=[]
+                    )
 
         except Exception as e:
             print(f"[BACKGROUND_PROCESSING] Background processing failed for file {fileId}: {str(e)}")
