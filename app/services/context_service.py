@@ -18,13 +18,6 @@ from app.utils.file_utils import (
 from app.utils.text_utils import (
     chunk_content_by_bytes
 )
-from app.utils.chat_history_utils import (
-    optimize_chat_history
-)
-from app.utils.llm_utils import (
-    extract_title_and_description,
-    extract_insights_and_summary
-)
 
 
 def get_strategic_sample(documents, max_chars=24000):
@@ -313,7 +306,7 @@ class ContextService(BaseService):
         finally:
             print(f"[BACKGROUND_PROCESSING] Completed processing for file {fileId}")
 
-    async def upload_file(self, file: UploadFile, userId: str, profileId: str, contextId: str = None) -> FileUploadResponse:
+    async def upload_file(self, file: UploadFile, userId: str, profileId: str, contextId: str = None, title: str = None) -> FileUploadResponse:
         """
         Upload and process a file (TXT or DOCX) with API key validation
         """
@@ -376,18 +369,17 @@ class ContextService(BaseService):
                 if content_length == 0:
                     raise Exception("File appears to be empty or content could not be extracted")
                 
-                # Extract title and description from content
-                print(f"[FILE_UPLOAD] Extracting title and description...")
-                try:
-                    title_and_desc = await extract_title_and_description(llm=self.llm, content=full_content, filename=file.filename)
-                    print(f"[FILE_UPLOAD] Extracted title: {title_and_desc['title']}")
-                except Exception as title_error:
-                    print(f"[FILE_UPLOAD] Title extraction failed: {title_error}")
-                    # Use fallback title and description
+                # Title comes from the caller, or falls back to the filename.
+                # No LLM pass: this service runs without any AI API key.
+                if title:
+                    title_and_desc = {"title": title, "description": ""}
+                    print(f"[FILE_UPLOAD] Using caller-provided title: {title}")
+                else:
                     title_and_desc = {
                         "title": file.filename.split('.')[0] if file.filename else "Uploaded Document",
-                        "description": "• Content extracted from uploaded document\n• Available for search and retrieval"
+                        "description": ""
                     }
+                    print(f"[FILE_UPLOAD] Using filename-derived title: {title_and_desc['title']}")
                 
                 # Validate that we have valid UUIDs before attempting processing
                 if userId == "string" or profileId == "string":
@@ -488,8 +480,20 @@ class ContextService(BaseService):
         Add a new context to the notebook system with API key validation
         """
         try:
-            # Extract a meaningful title and description from the context using LLM
-            title_and_desc = await extract_title_and_description(llm = self.llm, content = context_request.context)
+            if context_request.title:
+                # Caller-provided title (user-typed or import).
+                title_and_desc = {
+                    "title": context_request.title,
+                    "description": context_request.description or "",
+                }
+            else:
+                # No LLM pass: this service runs without any AI API key, so an
+                # untitled save is named after its first non-empty line.
+                first_line = next((l.strip() for l in context_request.context.splitlines() if l.strip()), "")
+                title_and_desc = {
+                    "title": first_line[:60] or "untitled",
+                    "description": "",
+                }
 
             # Log the authenticated request
             print(f"[CONTEXT_ADD] User: {context_request.userId}, Title: {title_and_desc['title']}")
@@ -567,24 +571,16 @@ class ContextService(BaseService):
         Process chat history to extract insights and user information, then save to vectorDB
         """
         try:
-            total_tokens_used = {
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "total_tokens": 0
+            # No LLM pass: the chat is stored as a plain transcript, titled by
+            # the caller or by its first user message. Searchable and intact,
+            # and this service runs without any AI API key.
+            chat_text = "\n".join(f"{m.role}: {m.content}" for m in rag_request.chatHistory)
+            first_user = next((m.content for m in rag_request.chatHistory if m.role == "user"), "")
+            insights_and_summary = {
+                "title": (rag_request.title or "").strip() or first_user.strip()[:60] or "Saved chat",
+                "insights": chat_text,
+                "description": "Saved chat transcript.",
             }
-            # Convert chat history to readable text format
-            optimized_history = await optimize_chat_history(
-                llm=self.llm,
-                chat_history=rag_request.chatHistory,
-                max_tokens=4000,
-                preserve_recent_turns=3,
-                total_tokens_used=total_tokens_used
-            )
-            chat_text = optimized_history["formatted_history"]
-            total_tokens_used = optimized_history["total_tokens_used"]
-            
-            # Extract insights and user information using LLM
-            insights_and_summary = await extract_insights_and_summary(llm = self.llm_advanced, chat_text = chat_text)
 
             # Log the authenticated request
             print(f"[RAG_CONTEXT_ADD] User: {rag_request.userId}, Chat messages: {len(rag_request.chatHistory)}")

@@ -1,7 +1,6 @@
 import psycopg2
 import boto3
 import asyncio
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from fastapi import HTTPException
 from typing import List
@@ -29,22 +28,9 @@ class BaseService:
             encode_kwargs={'normalize_embeddings': True}  # BGE models benefit from normalization
         )
 
-        # Initialize LLM. Model IDs come from settings (GEMINI_MODEL /
-        # GEMINI_MODEL_ADVANCED) — Google retires generations per account, so
-        # hard-coding one here has already bitten us twice (2.0 -> 2.5 -> 3.x).
-        self.llm = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_MODEL,
-            api_key=settings.GOOGLE_API_KEY,
-            temperature=0.7,
-            max_output_tokens=32768
-        )
-
-        self.llm_advanced = ChatGoogleGenerativeAI(
-            model=settings.GEMINI_MODEL_ADVANCED,
-            api_key=settings.GOOGLE_API_KEY,
-            temperature=0.7,
-            max_output_tokens=32768  # Increased from 4096 to handle large data separation (3000+ words)
-        )
+        # No chat LLM here: titles/summaries come from the caller or cheap
+        # text heuristics, so this service needs no Gemini (or any API) key.
+        # Embeddings above are the local BGE model.
 
         # Batching configuration for embeddings
         self.embedding_batch_size = settings.EMBEDDING_BATCH_SIZE
